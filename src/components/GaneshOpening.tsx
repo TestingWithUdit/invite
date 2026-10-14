@@ -10,49 +10,24 @@ type GaneshOpeningProps = {
   onBegin: () => void;
 };
 
-/** Soft finger + ripple cue so guests know to press Begin */
+/** Soft finger cue BELOW the button — never covers the click target */
 function BeginClickHint({ reduced }: { reduced: boolean }) {
   return (
     <motion.div
-      className="pointer-events-none absolute left-1/2 top-1/2 z-20"
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.45 }}
+      className="pointer-events-none mt-4 flex flex-col items-center"
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
       aria-hidden
     >
-      {/* Expanding ripples */}
-      {!reduced &&
-        [0, 1].map((i) => (
-          <motion.span
-            key={i}
-            className="absolute left-1/2 top-1/2 h-14 w-14 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-gold)]"
-            animate={{ scale: [0.6, 1.8], opacity: [0.55, 0] }}
-            transition={{
-              duration: 1.6,
-              delay: i * 0.55,
-              repeat: Infinity,
-              ease: 'easeOut',
-            }}
-          />
-        ))}
-
-      {/* Finger / cursor tip */}
       <motion.div
-        className="absolute left-1/2 top-1/2 -translate-x-[20%] -translate-y-[10%]"
-        animate={
-          reduced
-            ? undefined
-            : {
-                y: [0, 10, 0],
-                scale: [1, 0.9, 1],
-              }
-        }
+        animate={reduced ? undefined : { y: [0, 8, 0], scale: [1, 0.92, 1] }}
         transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
       >
         <svg
-          width="56"
-          height="56"
+          width="44"
+          height="44"
           viewBox="0 0 64 64"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -68,13 +43,12 @@ function BeginClickHint({ reduced }: { reduced: boolean }) {
           <circle cx="36" cy="36" r="5" fill="#c4a35a" opacity="0.9" />
         </svg>
       </motion.div>
-
       <motion.p
-        className="absolute left-1/2 top-[4.75rem] w-40 -translate-x-1/2 text-center font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--color-maroon)]"
+        className="mt-1 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--color-maroon)]"
         animate={reduced ? undefined : { opacity: [0.55, 1, 0.55] }}
         transition={{ duration: 1.6, repeat: Infinity }}
       >
-        Tap to begin
+        Tap the button above
       </motion.p>
     </motion.div>
   );
@@ -145,24 +119,14 @@ export function GaneshOpening({ onBegin }: GaneshOpeningProps) {
           {eventConfig.copy.ganeshaSupport}
         </p>
 
-        <div className="relative mt-10 inline-flex flex-col items-center">
-          {/* Soft attention pulse once hint is active */}
-          <AnimatePresence>
-            {showHint && !started && !reduced && (
-              <motion.span
-                className="pointer-events-none absolute inset-0 -m-1 rounded-full bg-[var(--color-gold)]/25"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: [0.25, 0.55, 0.25], scale: [1, 1.08, 1] }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                aria-hidden
-              />
-            )}
-          </AnimatePresence>
-
+        <div className="relative mt-10 flex flex-col items-center">
           <motion.button
             type="button"
             onClick={handleBegin}
+            onPointerUp={(e) => {
+              // Extra reliability on stubborn mobile browsers
+              if (e.pointerType === 'touch' && !started) handleBegin();
+            }}
             className="relative z-10 rounded-full border border-[var(--color-gold)] bg-[var(--color-maroon)] px-8 py-3.5 font-sans text-sm font-medium tracking-wide text-[var(--color-ivory)] shadow-[0_10px_28px_rgba(74,20,32,0.22)] transition hover:bg-[var(--color-burgundy)]"
             animate={
               showHint && !started && !reduced

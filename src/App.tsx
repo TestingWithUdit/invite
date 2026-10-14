@@ -13,27 +13,44 @@ import { useReducedMotion } from './hooks/useReducedMotion';
 
 gsap.registerPlugin(ScrollTrigger);
 
+function scrollToId(id: string, smooth: boolean) {
+  const el = document.getElementById(id);
+  if (!el) return false;
+  el.scrollIntoView({
+    behavior: smooth ? 'smooth' : 'auto',
+    block: 'start',
+  });
+  return true;
+}
+
 export default function App() {
   const reduced = useReducedMotion();
   const [showStory, setShowStory] = useState(false);
 
   const begin = useCallback(() => {
     setShowStory(true);
-    requestAnimationFrame(() => {
-      document.getElementById('royal-envelope')?.scrollIntoView({
-        behavior: reduced ? 'auto' : 'smooth',
-        block: 'start',
-      });
-    });
-  }, [reduced]);
+  }, []);
+
+  // Scroll only AFTER envelope is mounted (fixes single-click feeling broken)
+  useEffect(() => {
+    if (!showStory) return;
+    let tries = 0;
+    const tick = () => {
+      const ok = scrollToId('royal-envelope', !reduced);
+      if (!ok && tries < 20) {
+        tries += 1;
+        window.setTimeout(tick, 50);
+      }
+    };
+    // Wait one paint for React commit
+    const id = window.requestAnimationFrame(() => tick());
+    return () => window.cancelAnimationFrame(id);
+  }, [showStory, reduced]);
 
   const onEnvelopeOpened = useCallback(() => {
-    requestAnimationFrame(() => {
-      document.getElementById('meet-the-couple')?.scrollIntoView({
-        behavior: reduced ? 'auto' : 'smooth',
-        block: 'start',
-      });
-    });
+    window.setTimeout(() => {
+      scrollToId('meet-the-couple', !reduced);
+    }, 50);
   }, [reduced]);
 
   useEffect(() => {
@@ -80,7 +97,6 @@ export default function App() {
 
         {showStory && (
           <>
-            {/* Full invitation story — all sections stay visible for scrolling */}
             <RoyalEnvelope onOpened={onEnvelopeOpened} />
             <CoupleIntroduction />
             <ScratchCard />
