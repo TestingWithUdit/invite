@@ -1,24 +1,35 @@
 import confetti from 'canvas-confetti';
 import { Hand } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { SoftBackdrop } from './SoftBackdrop';
 import { eventConfig } from '../config/event';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 
 type ScratchCardProps = {
-  onRevealed: () => void;
+  onRevealed?: () => void;
 };
 
 const REVEAL_THRESHOLD = 0.4;
+const AUTO_SCRATCH_MS = 5000;
 
 export function ScratchCard({ onRevealed }: ScratchCardProps) {
   const reduced = useReducedMotion();
+  const sectionRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const drawing = useRef(false);
   const revealedRef = useRef(false);
+  const autoTimerRef = useRef<number | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [inView, setInView] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(5);
 
   const celebrate = useCallback(() => {
     if (reduced) return;
@@ -30,10 +41,19 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
     });
   }, [reduced]);
 
+  const clearAutoTimer = useCallback(() => {
+    if (autoTimerRef.current !== null) {
+      window.clearInterval(autoTimerRef.current);
+      autoTimerRef.current = null;
+    }
+  }, []);
+
   const finishReveal = useCallback(() => {
     if (revealedRef.current) return;
     revealedRef.current = true;
+    clearAutoTimer();
     setRevealed(true);
+    setSecondsLeft(0);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
@@ -44,8 +64,8 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
       canvas.style.pointerEvents = 'none';
     }
     celebrate();
-    onRevealed();
-  }, [celebrate, onRevealed]);
+    onRevealed?.();
+  }, [celebrate, clearAutoTimer, onRevealed]);
 
   const scratchedPercent = useCallback(() => {
     const canvas = canvasRef.current;
@@ -55,7 +75,7 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
     const { width, height } = canvas;
     const pixels = ctx.getImageData(0, 0, width, height).data;
     let transparent = 0;
-    const step = 4 * 8; // sample every 8th pixel for performance
+    const step = 4 * 8;
     for (let i = 3; i < pixels.length; i += step) {
       if (pixels[i] < 128) transparent += 1;
     }
@@ -87,7 +107,6 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
 
-    // shimmer lines
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 1;
     for (let i = -h; i < w + h; i += 14) {
@@ -113,6 +132,41 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [paintFoil, revealed]);
+
+  // Start 5s auto-scratch countdown once this section is on screen
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setInView(true);
+      },
+      { threshold: 0.45 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!inView || revealed || revealedRef.current) return;
+
+    const startedAt = Date.now();
+    setSecondsLeft(5);
+    autoTimerRef.current = window.setInterval(() => {
+      if (revealedRef.current) {
+        clearAutoTimer();
+        return;
+      }
+      const left = Math.max(0, Math.ceil((AUTO_SCRATCH_MS - (Date.now() - startedAt)) / 1000));
+      setSecondsLeft(left);
+      if (left <= 0) {
+        clearAutoTimer();
+        finishReveal();
+      }
+    }, 200);
+
+    return clearAutoTimer;
+  }, [clearAutoTimer, finishReveal, inView, revealed]);
 
   const scratchAt = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
@@ -156,6 +210,7 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
 
   return (
     <section
+      ref={sectionRef}
       id="scratch-date"
       className="paper-grain relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[var(--color-champagne)] px-5 py-20 safe-pad"
       aria-labelledby="scratch-heading"
@@ -172,11 +227,19 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
           {eventConfig.copy.scratchSubtitle}
         </p>
 
+        {!revealed && inView && (
+          <p
+            className="mt-3 font-sans text-xs tracking-wide text-[var(--color-maroon)]/80"
+            aria-live="polite"
+          >
+            Auto-reveal in {secondsLeft}s if you don’t scratch
+          </p>
+        )}
+
         <div
           ref={containerRef}
-          className="ornament-border relative mx-auto mt-8 aspect-[1.4/1] w-full overflow-hidden rounded-xl bg-[var(--color-ivory)]"
+          className="ornament-border relative mx-auto mt-6 aspect-[1.4/1] w-full overflow-hidden rounded-xl bg-[var(--color-ivory)]"
         >
-          {/* Real DOM text underneath foil */}
           <div className="absolute inset-0 z-0 flex flex-col items-center justify-center gap-2 px-4">
             <p className="font-display text-2xl font-medium text-[var(--color-maroon)] sm:text-3xl">
               {eventConfig.dateDisplay}
@@ -200,7 +263,6 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
             />
           )}
 
-          {/* Floral corners */}
           <span className="pointer-events-none absolute left-2 top-2 z-20 h-6 w-6 border-l border-t border-[var(--color-gold)]" aria-hidden />
           <span className="pointer-events-none absolute right-2 top-2 z-20 h-6 w-6 border-r border-t border-[var(--color-gold)]" aria-hidden />
           <span className="pointer-events-none absolute bottom-2 left-2 z-20 h-6 w-6 border-b border-l border-[var(--color-gold)]" aria-hidden />
@@ -214,9 +276,15 @@ export function ScratchCard({ onRevealed }: ScratchCardProps) {
           )}
         </div>
 
+        {revealed && (
+          <p className="mt-5 font-display text-sm italic text-[var(--color-burgundy)]/80">
+            Scroll down when you’re ready for the invitation details
+          </p>
+        )}
+
         <button
           type="button"
-          className="mt-6 text-sm font-medium text-[var(--color-maroon)] underline decoration-[var(--color-gold)] underline-offset-4"
+          className="mt-6 text-sm font-medium text-[var(--color-maroon)] underline decoration-[var(--color-gold)] underline-offset-4 disabled:opacity-40"
           onClick={finishReveal}
           disabled={revealed}
         >

@@ -92,10 +92,12 @@ export function GaneshOpening({ onBegin }: GaneshOpeningProps) {
     return () => window.clearTimeout(id);
   }, [started]);
 
-  const handleBegin = async () => {
+  const handleBegin = () => {
+    if (started) return;
     setStarted(true);
     setShowHint(false);
-    await play();
+    // Don't await audio — first click must always open the story
+    void play();
     onBegin();
   };
 
@@ -148,7 +150,7 @@ export function GaneshOpening({ onBegin }: GaneshOpeningProps) {
           <AnimatePresence>
             {showHint && !started && !reduced && (
               <motion.span
-                className="absolute inset-0 -m-1 rounded-full bg-[var(--color-gold)]/25"
+                className="pointer-events-none absolute inset-0 -m-1 rounded-full bg-[var(--color-gold)]/25"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: [0.25, 0.55, 0.25], scale: [1, 1.08, 1] }}
                 exit={{ opacity: 0 }}
@@ -160,8 +162,8 @@ export function GaneshOpening({ onBegin }: GaneshOpeningProps) {
 
           <motion.button
             type="button"
-            onClick={() => void handleBegin()}
-            className="relative rounded-full border border-[var(--color-gold)] bg-[var(--color-maroon)] px-8 py-3.5 font-sans text-sm font-medium tracking-wide text-[var(--color-ivory)] shadow-[0_10px_28px_rgba(74,20,32,0.22)] transition hover:bg-[var(--color-burgundy)]"
+            onClick={handleBegin}
+            className="relative z-10 rounded-full border border-[var(--color-gold)] bg-[var(--color-maroon)] px-8 py-3.5 font-sans text-sm font-medium tracking-wide text-[var(--color-ivory)] shadow-[0_10px_28px_rgba(74,20,32,0.22)] transition hover:bg-[var(--color-burgundy)]"
             animate={
               showHint && !started && !reduced
                 ? { scale: [1, 1.04, 1] }

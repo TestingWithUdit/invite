@@ -49,11 +49,6 @@ export const eventConfig = {
         caption: 'Our Ring Ceremony',
       },
       {
-        src: `${base}assets/couple/slide-01-bride-groom.png`,
-        alt: 'Chesta and Udit — meet the bride and groom scrapbook portrait',
-        caption: 'Meet the Bride & Groom',
-      },
-      {
         src: `${base}assets/couple/slide-02-groom-bride.png`,
         alt: 'Chesta and Udit — meet the groom and bride scrapbook portrait',
         caption: 'Meet the Groom & Bride',

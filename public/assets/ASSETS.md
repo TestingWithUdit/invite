@@ -8,9 +8,8 @@ Replace these files to update the animated slideshow:
 
 Slideshow order (configured in `event.ts`):
 1. `slide-03-ring-ceremony.png` — Ring Ceremony
-2. `slide-01-bride-groom.png` — Meet Bride & Groom
-3. `slide-02-groom-bride.png` — Meet Groom & Bride
-4. `slide-04-sunset-jeep.png` — Sunset floral arch
+2. `slide-02-groom-bride.png` — Meet Groom & Bride
+3. `slide-04-sunset-jeep.png` — Sunset floral arch
 
 Order and captions are configured in `src/config/event.ts` → `assets.coupleSlides`.
 

@@ -36,15 +36,6 @@ export default function App() {
     });
   }, [reduced]);
 
-  const onDateRevealed = useCallback(() => {
-    window.setTimeout(() => {
-      document.getElementById('invitation')?.scrollIntoView({
-        behavior: reduced ? 'auto' : 'smooth',
-        block: 'start',
-      });
-    }, reduced ? 100 : 600);
-  }, [reduced]);
-
   useEffect(() => {
     if (reduced || !showStory) return;
 
@@ -92,7 +83,7 @@ export default function App() {
             {/* Full invitation story — all sections stay visible for scrolling */}
             <RoyalEnvelope onOpened={onEnvelopeOpened} />
             <CoupleIntroduction />
-            <ScratchCard onRevealed={onDateRevealed} />
+            <ScratchCard />
             <InvitationDetails visible />
             <CountdownTimer />
             <FinalCelebration />
